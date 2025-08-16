@@ -1,5 +1,7 @@
 📝 Listas Colaborativas IA 🚀
+
 [!WARNING]
+
 🚧 Projeto em Desenvolvimento 🚧
 Este projeto ainda está em fase de desenvolvimento ativo. Novas funcionalidades e melhorias são implementadas com frequência.
 
