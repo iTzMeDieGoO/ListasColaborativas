@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listas Colaborativas com IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .menu-popover {
+            position: absolute;
+            z-index: 10;
+            display: none;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translateY(20px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+        }
+        .toast-animate {
+            animation: fadeInOut 7s ease-in-out forwards;
+        }
+        .toast-animate-short {
+             animation: fadeInOut 3s ease-in-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-sky-100 to-indigo-200 text-gray-800 min-h-screen">
+
+    <div id="app" class="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- Tela Inicial (Home) -->
+        <div id="home-screen">
+            <div class="text-center mb-8">
+                <div class="flex justify-center mb-4">
+                    <svg class="w-32 h-32 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 17L11 19L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20 13V6.8C20 5.11984 20 4.27976 19.673 3.63803C19.3854 3.07354 18.9265 2.6146 18.362 2.32698C17.7202 2 16.8802 2 15.2 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h1 class="text-4xl font-bold text-gray-900">Listas Colaborativas</h1>
+                <p class="mt-2 text-lg text-gray-600">Suas tarefas e projetos, sincronizados e com sugestões de IA.</p>
+            </div>
+            
+            <div class="space-y-6">
+                <div class="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Comece uma nova lista</h2>
+                    <div class="space-y-4">
+                        <input type="text" id="new-list-name" placeholder="Ex: Projeto da Semana" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white/80">
+                        <button id="create-list-btn" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:shadow-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Criar Lista</button>
+                    </div>
+                </div>
+                <div class="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Entrar em uma lista</h2>
+                    <div class="space-y-4">
+                        <input type="text" id="list-hash-input" placeholder="Cole o código da lista" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition bg-white/80">
+                        <button id="find-list-btn" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold py-3 px-4 rounded-lg hover:shadow-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Buscar Lista</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tela da Lista de Afazeres -->
+        <div id="list-screen" class="hidden">
+            <div class="bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-200/50">
+                <div class="flex justify-between items-center mb-6">
+                     <button id="back-to-home-btn" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                     </button>
+                    <div class="text-right">
+                        <h2 id="list-name-display" class="text-2xl font-bold text-gray-900 truncate"></h2>
+                        <div class="flex items-center justify-end gap-2 mt-1">
+                           <span class="text-sm font-mono bg-gray-200 text-gray-700 px-2 py-1 rounded-full">CÓDIGO: <span id="list-hash-display" class="font-bold"></span></span>
+                           <button id="copy-hash-btn" class="p-1.5 rounded-full hover:bg-gray-200 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                           </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3 mb-6">
+                    <input type="text" id="new-item-input" placeholder="Adicionar um novo item..." class="flex-grow px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white/80">
+                    <button id="add-item-btn" class="bg-blue-600 text-white font-semibold p-3 rounded-xl hover:bg-blue-700 transition-colors shrink-0 shadow-md hover:shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                    <button id="ai-suggest-btn" class="bg-teal-500 text-white font-semibold p-3 rounded-xl hover:bg-teal-600 transition-colors shrink-0 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                        <span id="ai-btn-icon">✨</span>
+                    </button>
+                </div>
+                <div id="items-container" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Botão de Ajuda Flutuante -->
+    <button id="help-btn" class="fixed bottom-5 right-5 bg-purple-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-transform hover:scale-110 z-20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    </button>
+    
+    <!-- Modais e Toast -->
+    <div id="tutorial-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg border-t-4 border-purple-500">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">Como Usar o App</h3>
+                <button id="close-tutorial-btn" class="p-1 rounded-full hover:bg-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="space-y-4 text-gray-700">
+                <div>
+                    <strong class="text-gray-900">✨ Nova Função com IA:</strong>
+                    <p>Clique no botão com o brilho (✨) para a IA criar uma lista de tarefas para você. Se não gostar, clique em <strong>"Desfazer"</strong> na notificação que aparecerá.</p>
+                </div>
+                <div>
+                    <strong class="text-gray-900">🚀 Para Criar uma Lista:</strong>
+                    <p>Na tela inicial, dê um nome para sua lista e clique em "Criar Lista".</p>
+                </div>
+                <div>
+                    <strong class="text-gray-900">🤝 Para Entrar em uma Lista:</strong>
+                    <p>Peça o <strong>código de 5 dígitos</strong> e insira no campo "Entrar em uma lista".</p>
+                </div>
+                 <div>
+                    <strong class="text-gray-900">📲 Para Compartilhar sua Lista:</strong>
+                    <p>Dentro de uma lista, clique no ícone de cópia ao lado do código e envie para seus amigos!</p>
+                </div>
+            </div>
+             <div class="mt-6 text-center">
+                <button id="got-it-btn" class="bg-purple-600 text-white font-semibold py-2 px-8 rounded-lg hover:bg-purple-700">Entendi!</button>
+            </div>
+        </div>
+    </div>
+    <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md border-t-4 border-blue-500">
+            <h3 class="text-xl font-semibold mb-4">Editar Item</h3>
+            <input type="text" id="edit-item-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4">
+            <div class="flex justify-end gap-2">
+                <button id="cancel-edit-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancelar</button>
+                <button id="save-edit-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Salvar</button>
+            </div>
+        </div>
+    </div>
+    <div id="delete-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md text-center border-t-4 border-red-500">
+            <h3 class="text-xl font-semibold mb-2">Tem certeza?</h3>
+            <p class="text-gray-600 mb-6">Esta ação não pode ser desfeita.</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancel-delete-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300">Cancelar</button>
+                <button id="confirm-delete-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-red-700">Deletar</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-900 text-white py-2 px-4 rounded-full shadow-lg z-50 flex items-center gap-4">
+        <span id="toast-message"></span>
+        <button id="undo-btn" class="hidden text-sm font-semibold text-cyan-300 hover:text-cyan-200">Desfazer</button>
+    </div>
+
+    <script type="module">
+        // Importações do Firebase a partir da CDN
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuração do Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyDDlVGkyjOIt8ZE_oIFXaG_OvqWzPKDz68",
+          authDomain: "listascolaborativas.firebaseapp.com",
+          projectId: "listascolaborativas",
+          storageBucket: "listascolaborativas.firebasestorage.app",
+          messagingSenderId: "284904890256",
+          appId: "1:284904890256:web:eb13ed546ed43c1ba81d15",
+          measurementId: "G-7DPLX4FN0B"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // --- Elementos da UI ---
+        const homeScreen = document.getElementById('home-screen');
+        const listScreen = document.getElementById('list-screen');
+        const newListInput = document.getElementById('new-list-name');
+        const createListBtn = document.getElementById('create-list-btn');
+        const findListInput = document.getElementById('list-hash-input');
+        const findListBtn = document.getElementById('find-list-btn');
+        const listNameDisplay = document.getElementById('list-name-display');
+        const listHashDisplay = document.getElementById('list-hash-display');
+        const copyHashBtn = document.getElementById('copy-hash-btn');
+        const backToHomeBtn = document.getElementById('back-to-home-btn');
+        const newItemInput = document.getElementById('new-item-input');
+        const addItemBtn = document.getElementById('add-item-btn');
+        const itemsContainer = document.getElementById('items-container');
+        const aiSuggestBtn = document.getElementById('ai-suggest-btn');
+        const aiBtnIcon = document.getElementById('ai-btn-icon');
+        const editModal = document.getElementById('edit-modal');
+        const editItemInput = document.getElementById('edit-item-input');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const undoBtn = document.getElementById('undo-btn');
+        const helpBtn = document.getElementById('help-btn');
+        const tutorialModal = document.getElementById('tutorial-modal');
+        const closeTutorialBtn = document.getElementById('close-tutorial-btn');
+        const gotItBtn = document.getElementById('got-it-btn');
+
+        // --- Estado da Aplicação ---
+        let currentListHash = null;
+        let unsubscribe = null;
+        let itemToEditId = null;
+        let itemToDeleteId = null;
+        let toastTimeout;
+        let lastAiSuggestionIds = [];
+
+        // --- Inicialização ---
+        async function initialize() {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Erro na autenticação:", error);
+                showToast("Erro de autenticação.");
+            }
+        }
+
+        // --- Funções Auxiliares ---
+        function showToast(message, showUndo = false) {
+            clearTimeout(toastTimeout);
+            toastMessage.textContent = message;
+            toast.classList.remove('toast-animate', 'toast-animate-short');
+            void toast.offsetWidth; 
+            if (showUndo) {
+                undoBtn.classList.remove('hidden');
+                toast.classList.add('toast-animate'); 
+            } else {
+                undoBtn.classList.add('hidden');
+                toast.classList.add('toast-animate-short'); 
+            }
+            toast.classList.remove('hidden');
+        }
+
+        function generateListHash() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const nums = '0123456789';
+            let result = '';
+            let turn = Math.random() < 0.5; 
+            for (let i = 0; i < 5; i++) {
+                result += turn ? chars.charAt(Math.floor(Math.random() * chars.length)) : nums.charAt(Math.floor(Math.random() * nums.length));
+                turn = !turn;
+            }
+            return result;
+        }
+
+        function switchScreen(screenName) {
+            homeScreen.classList.add('hidden');
+            listScreen.classList.add('hidden');
+            document.getElementById(`${screenName}-screen`).classList.remove('hidden');
+        }
+
+        // --- Lógica da Lista ---
+        async function createList() {
+            const listName = newListInput.value.trim();
+            if (!listName) {
+                showToast("Por favor, dê um nome para a lista.");
+                return;
+            }
+            createListBtn.disabled = true;
+            createListBtn.innerHTML = '<span class="animate-pulse">Criando...</span>';
+            let listHash = generateListHash();
+            let listRef = doc(db, `artifacts/${appId}/public/data/lists`, listHash);
+            try {
+                let docSnap = await getDoc(listRef);
+                while (docSnap.exists()) {
+                    listHash = generateListHash();
+                    listRef = doc(db, `artifacts/${appId}/public/data/lists`, listHash);
+                }
+                await setDoc(listRef, { name: listName, items: [], createdAt: new Date().toISOString() });
+                showToast("Lista criada com sucesso!");
+                navigateToList(listHash);
+            } catch (error) {
+                console.error("Erro ao criar lista:", error);
+                showToast("Não foi possível criar a lista.");
+            } finally {
+                createListBtn.disabled = false;
+                createListBtn.textContent = 'Criar Lista';
+                newListInput.value = '';
+            }
+        }
+
+        async function findList() {
+            const listHash = findListInput.value.trim().toUpperCase();
+            if (!listHash) {
+                showToast("Por favor, insira o código da lista.");
+                return;
+            }
+            const listRef = doc(db, `artifacts/${appId}/public/data/lists`, listHash);
+            try {
+                const docSnap = await getDoc(listRef);
+                if (docSnap.exists()) {
+                    navigateToList(listHash);
+                } else {
+                    showToast("Lista não encontrada. Verifique o código.");
+                }
+            } catch (error) {
+                console.error("Erro ao buscar lista:", error);
+                showToast("Erro ao buscar a lista.");
+            }
+        }
+
+        function navigateToList(listHash) {
+            currentListHash = listHash;
+            listNameDisplay.textContent = 'Carregando...';
+            listHashDisplay.textContent = currentListHash;
+            switchScreen('list');
+            if (unsubscribe) unsubscribe();
+            const listRef = doc(db, `artifacts/${appId}/public/data/lists`, currentListHash);
+            unsubscribe = onSnapshot(listRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    renderList(docSnap.data());
+                } else {
+                    showToast("Esta lista foi removida.");
+                    goHome();
+                }
+            }, (error) => {
+                 console.error("Erro no listener: ", error);
+                 showToast("Erro de conexão com a lista.");
+                 goHome();
+            });
+        }
+
+        function goHome() {
+            if (unsubscribe) unsubscribe();
+            currentListHash = null;
+            itemsContainer.innerHTML = '';
+            findListInput.value = '';
+            switchScreen('home');
+        }
+
+        function renderList(listData) {
+            listNameDisplay.textContent = listData.name;
+            itemsContainer.innerHTML = ''; 
+            if (listData.items.length === 0) {
+                 itemsContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum item na lista ainda.</p>';
+            } else {
+                const sortedItems = [...listData.items].sort((a, b) => a.completed - b.completed);
+                sortedItems.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    const borderClass = item.completed ? 'border-green-400' : 'border-blue-400';
+                    itemEl.className = `flex items-center justify-between bg-white p-3 rounded-lg shadow-sm border-l-4 ${borderClass} transition-all duration-300 ${item.completed ? 'opacity-60' : 'opacity-100'}`;
+                    itemEl.dataset.id = item.id;
+                    const textClass = item.completed ? 'line-through text-gray-500' : 'text-gray-800';
+                    itemEl.innerHTML = `
+                        <div class="flex items-center gap-3 flex-grow min-w-0">
+                            <input type="checkbox" class="h-5 w-5 rounded-full border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer item-checkbox shrink-0" ${item.completed ? 'checked' : ''}>
+                            <p class="font-medium ${textClass} break-words">${item.text}</p>
+                        </div>
+                        <div class="relative shrink-0 ml-2">
+                            <button class="p-2 rounded-full hover:bg-gray-200 transition-colors menu-toggle">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
+                            </button>
+                            <div class="menu-popover bg-white border rounded-md shadow-lg right-0 mt-2 w-36">
+                                <a href="#" class="edit-btn flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>
+                                    Editar
+                                </a>
+                                <a href="#" class="delete-btn flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Deletar
+                                </a>
+                            </div>
+                        </div>`;
+                    itemsContainer.appendChild(itemEl);
+                });
+            }
+        }
+        
+        async function addItem() {
+            const itemText = newItemInput.value.trim();
+            if (!itemText) return;
+            const listRef = doc(db, `artifacts/${appId}/public/data/lists`, currentListHash);
+            try {
+                const docSnap = await getDoc(listRef);
+                if (docSnap.exists()) {
+                    const newItem = { id: crypto.randomUUID(), text: itemText, completed: false };
+                    await updateDoc(listRef, { items: [...docSnap.data().items, newItem] });
+                    newItemInput.value = '';
+                }
+            } catch (error) {
+                console.error("Erro ao adicionar item:", error);
+                showToast("Não foi possível adicionar o item.");
+            }
+        }
+
+        async function updateItem(itemId, updateFn) {
+            const listRef = doc(db, `artifacts/${appId}/public/data/lists`, currentListHash);
+            try {
+                const docSnap = await getDoc(listRef);
+                if (docSnap.exists()) {
+                    const updatedItems = docSnap.data().items.map(item => item.id === itemId ? updateFn(item) : item);
+                    await updateDoc(listRef, { items: updatedItems });
+                }
+            } catch (error) {
+                console.error("Erro ao atualizar item:", error);
+                showToast("Não foi possível atualizar o item.");
+            }
+        }
+
+        function openEditModal(itemId) {
+            const listRef = doc(db, `artifacts/${appId}/public/data/lists`, currentListHash);
+            getDoc(listRef).then(docSnap => {
+                const item = docSnap.exists() ? docSnap.data().items.find(i => i.id === itemId) : null;
+                if (item) {
+                    itemToEditId = itemId;
+                    editItemInput.value = item.text;
+                    editModal.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function closeEditModal() { itemToEditId = null; editModal.classList.add('hidden'); }
+        
+        function openDeleteConfirm(itemId) { itemToDeleteId = itemId; deleteConfirmModal.classList.remove('hidden'); }
+        
+        function closeDeleteConfirm() { itemToDeleteId = null; deleteConfirmModal.classList.add('hidden'); }
+        
+        async function deleteItem() {
+            if (!itemToDeleteId) return;
+            const listRef = doc(db, `artifacts/${appId}/public/data/lists`, currentListHash);
+            try {
+                const docSnap = await getDoc(listRef);
+                if (docSnap.exists()) {
+                    const updatedItems = docSnap.data().items.filter(item => item.id !== itemToDeleteId);
+                    await updateDoc(listRef, { items: updatedItems });
+                    closeDeleteConfirm();
+                    showToast("Item deletado com sucesso.");
+                }
+            } catch (error) {
+                console.error("Erro ao deletar item:", error);
+                showToast("Não foi possível deletar o item.");
+            }
+        }
+
+        async function getAiSuggestions() {
+            const listName = listNameDisplay.textContent;
+            if (!listName) {
+                showToast("O nome da lista está vazio.");
+                return;
+            }
+            aiBtnIcon.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            aiSuggestBtn.disabled = true;
+            const prompt = `Você é um assistente de produtividade. Para o título de lista de tarefas '${listName}', gere uma lista de 5 a 7 itens de tarefas comuns. Responda APENAS com um array JSON de strings. Exemplo de resposta: ["Tarefa 1", "Tarefa 2"]`;
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: { type: "ARRAY", items: { "type": "STRING" } }
+                }
+            };
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const result = await response.json();
+                const suggestionsText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (suggestionsText) {
+                    const suggestions = JSON.parse(suggestionsText);
+                    if (suggestions && suggestions.length > 0) {
+                        const newItems = suggestions.map(s => ({ id: crypto.randomUUID(), text: s, completed: false }));
+                        lastAiSuggestionIds = newItems.map(item => item.id);
+                        const listRef = doc(db, `artifacts/${appId}/public/data/lists`, currentListHash);
+                        const docSnap = await getDoc(listRef);
+                        if (docSnap.exists()) {
+                            const existingItems = docSnap.data().items;
+                            await updateDoc(listRef, { items: [...existingItems, ...newItems] });
+                            showToast("Sugestões adicionadas!", true);
+                        }
+                    }
+                } else {
+                    throw new Error("Nenhuma sugestão recebida da IA.");
+                }
+            } catch (error) {
+                console.error("Erro ao obter sugestões da IA:", error);
+                showToast("Desculpe, não consegui gerar sugestões.");
+            } finally {
+                aiBtnIcon.innerHTML = "✨";
+                aiSuggestBtn.disabled = false;
+            }
+        }
+        
+        async function undoAiSuggestions() {
+            if (lastAiSuggestionIds.length === 0) return;
+            const listRef = doc(db, `artifacts/${appId}/public/data/lists`, currentListHash);
+            try {
+                const docSnap = await getDoc(listRef);
+                if (docSnap.exists()) {
+                    const currentItems = docSnap.data().items;
+                    const updatedItems = currentItems.filter(item => !lastAiSuggestionIds.includes(item.id));
+                    await updateDoc(listRef, { items: updatedItems });
+                    showToast("Sugestões removidas.");
+                    lastAiSuggestionIds = [];
+                    toast.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error("Erro ao desfazer sugestões:", error);
+                showToast("Não foi possível desfazer.");
+            }
+        }
+
+        createListBtn.addEventListener('click', createList);
+        findListBtn.addEventListener('click', findList);
+        backToHomeBtn.addEventListener('click', goHome);
+        addItemBtn.addEventListener('click', addItem);
+        newItemInput.addEventListener('keyup', (e) => e.key === 'Enter' && addItem());
+        copyHashBtn.addEventListener('click', () => {
+             navigator.clipboard.writeText(currentListHash).then(() => showToast('Código copiado!'), () => showToast('Falha ao copiar.'));
+        });
+        aiSuggestBtn.addEventListener('click', getAiSuggestions);
+        undoBtn.addEventListener('click', undoAiSuggestions);
+        cancelEditBtn.addEventListener('click', closeEditModal);
+        saveEditBtn.addEventListener('click', () => {
+            const newText = editItemInput.value.trim();
+            if (newText && itemToEditId) {
+                updateItem(itemToEditId, item => ({ ...item, text: newText }));
+                closeEditModal();
+                showToast("Item atualizado!");
+            }
+        });
+        cancelDeleteBtn.addEventListener('click', closeDeleteConfirm);
+        confirmDeleteBtn.addEventListener('click', deleteItem);
+        const closeTutorial = () => tutorialModal.classList.add('hidden');
+        helpBtn.addEventListener('click', () => tutorialModal.classList.remove('hidden'));
+        closeTutorialBtn.addEventListener('click', closeTutorial);
+        gotItBtn.addEventListener('click', closeTutorial);
+        itemsContainer.addEventListener('click', (e) => {
+            const itemEl = e.target.closest('[data-id]');
+            if (!itemEl) return;
+            const itemId = itemEl.dataset.id;
+            if (e.target.closest('.item-checkbox')) {
+                updateItem(itemId, item => ({ ...item, completed: !item.completed }));
+            } else if (e.target.closest('.menu-toggle')) {
+                const menu = itemEl.querySelector('.menu-popover');
+                const isVisible = menu.style.display === 'block';
+                document.querySelectorAll('.menu-popover').forEach(m => m.style.display = 'none');
+                if (!isVisible) {
+                    menu.style.display = 'block';
+                }
+            } else if (e.target.closest('.edit-btn')) {
+                openEditModal(itemId);
+            } else if (e.target.closest('.delete-btn')) {
+                openDeleteConfirm(itemId);
+            }
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-toggle')) {
+                document.querySelectorAll('.menu-popover').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+        
+        initialize();
+    </script>
+</body>
+</html>
