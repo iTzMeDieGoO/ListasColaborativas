@@ -1,6 +1,7 @@
 📝 Listas Colaborativas IA 🚀
 
-[!WARNING]
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Status](https://img.shields.io/badge/status-em%20desenvolvimento-green.svg)
 
 🚧 Projeto em Desenvolvimento 🚧
 Este projeto ainda está em fase de desenvolvimento ativo. Novas funcionalidades e melhorias são implementadas com frequência.
